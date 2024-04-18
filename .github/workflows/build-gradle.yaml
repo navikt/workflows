@@ -50,7 +50,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
         env:
           DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS: ${{ inputs.include_configurations }}
-          GITHUB_TOKEN: ${{ (inputs.readertoken && secrets.READER_TOKEN) || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ (inputs.use_reader_token && secrets.READER_TOKEN) || secrets.GITHUB_TOKEN }}
         with:
           dependency-graph: generate-and-submit
           arguments: ${{ inputs.build_command }}
