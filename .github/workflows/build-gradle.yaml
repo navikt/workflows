@@ -1,0 +1,66 @@
+name: Build
+on:
+  workflow_call:
+    inputs:
+      team:
+        required: true
+        type: string
+      docker_context:
+        required: false
+        type: string
+        default: .
+      use_reader_token:
+        required: false
+        type: boolean
+        default: false
+      build_command:
+        required: false
+        type: string
+        default: build -x test
+      java_version:
+        required: false
+        type: string
+        default: 21
+      push_image:
+        required: false
+        type: boolean
+        default: true
+      include_configurations:
+        required: false
+        type: string
+        default: 'compileClasspath|runtimeClasspath'
+    outputs:
+      image:
+        value: ${{ jobs.build.outputs.image }}
+jobs:
+  build:
+    permissions:
+      contents: write # for dependency submission
+      id-token: write # for nais/docker-build-push
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.docker-push.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: temurin
+          cache: gradle
+      - uses: gradle/actions/setup-gradle@v3
+        env:
+          DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS: ${{ inputs.include_configurations }}
+          GITHUB_TOKEN: ${{ (inputs.readertoken && secrets.READER_TOKEN) || secrets.GITHUB_TOKEN }}
+        with:
+          dependency-graph: generate-and-submit
+          arguments: ${{ inputs.build_command }}
+      - uses: nais/docker-build-push@14cd7a0a656477da33aa7d627123330990ef3807 # ratchet:nais/docker-build-push@v0
+        id: docker-push
+        with:
+          team: ${{ inputs.team }}
+          push_image: ${{ inputs.push_image }}
+          pull: true
+          dockerfile: Dockerfile
+          docker_context: ${{ inputs.docker_context }}
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
